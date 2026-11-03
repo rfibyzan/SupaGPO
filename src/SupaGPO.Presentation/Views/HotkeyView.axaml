@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SupaGPO.Presentation.ViewModels"
+             x:DataType="vm:HotkeyViewModel"
+             x:Class="SupaGPO.Presentation.Views.HotkeyView">
+
+    <StackPanel Spacing="12">
+        <Border Classes="card">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Macro Hotkey" Classes="h2" />
+                <TextBlock Classes="caps" Text="Global Start/Stop toggle. Polled via GetAsyncKeyState." />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Hotkey:" Classes="label" />
+                    <TextBox Text="{Binding HotkeyName}" Width="100" />
+                </StackPanel>
+                <TextBlock Text="{Binding CurrentKey}" Classes="caps" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Pressed state:" Classes="label" />
+                    <TextBlock Text="{Binding IsPressed}" Classes="mono" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

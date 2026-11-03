@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SupaGPO.Presentation.Views.OverlayWindow"
+        Title="SupaGPO Overlay"
+        SystemDecorations="None"
+        Topmost="True"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        CanResize="False"
+        SizeToContent="WidthAndHeight"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent">
+
+    <Border Background="#CC0A0A0A" CornerRadius="8" Padding="12,8"
+            BorderBrush="#33FFFFFF" BorderThickness="1">
+        <StackPanel Spacing="3">
+            <TextBlock x:Name="StatusText" Foreground="#EDEDED" FontSize="12" FontWeight="SemiBold" />
+            <TextBlock x:Name="SessionText" Foreground="#8C8C8C" FontSize="11" />
+            <ProgressBar x:Name="ProgressBar" MinWidth="200" Height="4" Value="0" />
+        </StackPanel>
+    </Border>
+</Window>

@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SupaGPO.Presentation.ViewModels"
+             x:DataType="vm:OffsetsViewModel"
+             x:Class="SupaGPO.Presentation.Views.OffsetsView">
+
+    <StackPanel Spacing="12">
+        <Border Classes="card">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Offsets Source" Classes="h2" />
+                <TextBlock Classes="caps" Text="offsets.json for the live Roblox build. Validate-then-replace; never applied if it fails to parse. Supports the provider wrapper format (nested Offsets + Roblox Version) with version check." />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="URL:" Classes="label" />
+                    <TextBox Text="{Binding Url}" Width="400" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Update &amp; Save Offsets" Command="{Binding UpdateCommand}" Classes="accent" />
+                    <Button Content="Reload from File" Command="{Binding ReloadCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding Status}" Classes="caps" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Local file:" Classes="label" />
+                    <TextBlock Text="{Binding LocalPath}" Classes="mono" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Loaded offsets:" Classes="label" />
+                    <TextBlock Text="{Binding OffsetCount}" Classes="mono" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

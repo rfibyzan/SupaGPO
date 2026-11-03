@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SupaGPO.Presentation.ViewModels"
+             x:DataType="vm:OverlayViewModel"
+             x:Class="SupaGPO.Presentation.Views.OverlayView">
+
+    <StackPanel Spacing="12">
+        <Border Classes="card">
+            <StackPanel Spacing="8">
+                <CheckBox Content="Show overlay" IsChecked="{Binding OverlayVisible}" />
+                <TextBlock Text="Latest status" Classes="h2" />
+                <TextBlock Text="{Binding LatestLine}" Classes="mono" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Lines:" Classes="label" />
+                    <TextBlock Text="{Binding LineCount}" />
+                </StackPanel>
+                <Button Content="Clear" Command="{Binding ClearCommand}" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

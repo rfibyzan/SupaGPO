@@ -1,0 +1,261 @@
+using SupaGPO.Core.Diagnostics;
+using SupaGPO.Core.Fishing;
+using SupaGPO.Core.Input;
+using SupaGPO.Core.Net;
+using SupaGPO.Core.Offsets;
+using SupaGPO.Core.Process;
+using SupaGPO.Core.Roblox;
+using SupaGPO.Core.Settings;
+using SupaGPO.Core.Visual;
+
+namespace SupaGPO.Presentation;
+
+/// <summary>
+/// Composition root: owns all Core runtime objects — reader memori (attach ke Roblox),
+/// sensor, macro fishing GPO, hotkey. Presentation binds to this via the viewmodels.
+/// </summary>
+public sealed class RuntimeHost : IDisposable
+{
+    private readonly JsonPreferenceStore _store;
+    private readonly SettingsAutoSaver _autoSaver;
+    private readonly ProcessAttacher _attacher = new();
+    private readonly InputDriver _input = new();
+    private readonly WebhookDispatcher _webhook;
+    private readonly Core.Overlay.OverlayViewModel _overlayVm = new();
+    private OffsetsSnapshot _offsets;
+    private readonly OffsetsUpdateService _offsetsUpdate = new(new HttpClient());
+    private readonly string _offsetsFilePath;
+    private readonly GdiGameScreen _screen = new();
+    private readonly RobloxMemoryReader _reader;
+    private readonly GpoCharacterReader _characterReader;
+    private readonly GpoNavigator _navigator;
+    private readonly IFishingSensors _sensors;
+    private readonly GpoFishingMacro _macro;
+    private HotkeyService _hotkey;
+    private readonly System.Threading.Timer _hotkeyTimer;
+
+    public AppSettings Settings { get; }
+    public ProcessAttacher Attacher => _attacher;
+    public InputDriver Input => _input;
+    public WebhookDispatcher Webhook => _webhook;
+    public Core.Overlay.OverlayViewModel OverlayVm => _overlayVm;
+    public OffsetsSnapshot Offsets => _offsets;
+    public OffsetsUpdateService OffsetsUpdateService => _offsetsUpdate;
+    public string OffsetsFilePath => _offsetsFilePath;
+    public RobloxMemoryReader Reader => _reader;
+    public IFishingSensors Sensors => _sensors;
+    public GpoFishingMacro Macro => _macro;
+    public HotkeyService Hotkey => _hotkey;
+
+    public bool IsAttached => _reader.IsAttached;
+    public int ProcessId => _reader.ProcessId;
+
+    public RuntimeHost()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var settingsDir = Path.Combine(appData, "SupaGPO");
+        _offsetsFilePath = Path.Combine(settingsDir, "offsets.json");
+        _store = new JsonPreferenceStore(settingsDir);
+        Settings = _store.Load();
+        _autoSaver = new SettingsAutoSaver(Settings, _store);
+        MigratePrefs();
+
+        // Load offsets from local file if present; otherwise try auto-download from
+        // the default provider URL so the user never has to type it.
+        _offsets = OffsetsSnapshot.LoadFromFile(_offsetsFilePath)
+            ?? OffsetsSnapshot.Load("{}");
+        var providerUrl = !string.IsNullOrWhiteSpace(Settings.Offsets.ProviderUrl)
+            ? Settings.Offsets.ProviderUrl
+            : OffsetsSettings.DefaultProviderUrl;
+        if (_offsets.Count == 0 && !string.IsNullOrWhiteSpace(providerUrl))
+        {
+            // Fire-and-forget background download so the constructor doesn't block the UI thread.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var (ok, msg) = await UpdateAndSaveOffsetsAsync(providerUrl);
+                    AppLog.Line($"Auto offsets result: ok={ok}, msg={msg}");
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Error("Auto offsets", ex);
+                }
+            });
+        }
+
+        _webhook = new WebhookDispatcher(new HttpClient());
+        _reader = new RobloxMemoryReader(_attacher, _offsets);
+        _characterReader = new GpoCharacterReader(_reader);
+        _navigator = new GpoNavigator(_input, _characterReader);
+        _sensors = new RobloxFishingSensors(_reader, visualReel: null, () => Settings.Loot);
+        var debug = new ReelDebugDumper(Path.Combine(settingsDir, "debug"));
+        _macro = new GpoFishingMacro(_input, _screen, () => Settings.Fishing,
+            () => (uint)Math.Max(0, ProcessId), () => Environment.TickCount64,
+            autoThread: true, debug: debug,
+            characterReader: _characterReader, navigator: _navigator);
+        _macro.StatusChanged += () =>
+        {
+            double v = _macro.Phase == FishingPhase.Reel ? _macro.LastProgress * 100 : -1;
+            _overlayVm.Set("FISH", _macro.StatusText, false, v);
+        };
+
+        _hotkey = new HotkeyService(Settings.General.MacroHotkey);
+
+        // Poll hotkey ~20 Hz (timer di-field agar tidak di-GC).
+        _hotkeyTimer = new System.Threading.Timer(_ => PollHotkey(), null, Timeout.Infinite, Timeout.Infinite);
+        _hotkeyTimer.Change(0, 50);
+
+        // Attach sekali di startup bila Roblox sudah berjalan, lalu retry otomatis tiap 2 s.
+        AttachRoblox();
+        _attachTimer = new System.Threading.Timer(_ => TryAutoAttach(), null, 2000, 2000);
+    }
+
+    private readonly System.Threading.Timer _attachTimer;
+
+    /// <summary>
+    /// Migrasi preferensi lama, sekali saja (PrefsVersion menandai sudah jalan).
+    /// Harus dipanggil SETELAH _autoSaver dibuat supaya perubahan ikut tersimpan ke disk:
+    /// F1 → F3 (default baru) dan EquipOnStart true → false (macro tak lagi melepas rod).
+    /// </summary>
+    private void MigratePrefs()
+    {
+        if (Settings.PrefsVersion >= 1) return;
+        if (Settings.General.MacroHotkey is "F1")
+            Settings.General = Settings.General with { MacroHotkey = "F3" };
+        if (Settings.Fishing.EquipOnStart)
+            Settings.Fishing = Settings.Fishing with { EquipOnStart = false };
+        Settings.PrefsVersion = 1;
+        AppLog.Line("Preferences migrated (hotkey F3, equip-on-start off).");
+    }
+
+    /// <summary>Retry attach tanpa log — dipanggil timer sampai Roblox ditemukan.</summary>
+    private void TryAutoAttach()
+    {
+        if (IsAttached) return;
+        if (_reader.TryAttach(out _))
+        {
+            AppLog.Line($"Auto-attach OK. {VersionStatus}");
+            StatusChanged?.Invoke();
+        }
+    }
+
+    public void Toggle() => _macro.Toggle();
+
+    /// <summary>Hotkey macro (Start/Stop). Mengganti nilai langsung aktif tanpa restart.</summary>
+    public string MacroHotkey
+    {
+        get => Settings.General.MacroHotkey;
+        set
+        {
+            value = string.IsNullOrWhiteSpace(value) ? "F3" : value.Trim().ToUpperInvariant();
+            Settings.General = Settings.General with { MacroHotkey = value };
+            _hotkey = new HotkeyService(value);
+        }
+    }
+
+    /// <summary>Overlay in-game: jendela kecil click-through di atas Roblox.</summary>
+    public bool OverlayVisible
+    {
+        get => Settings.General.ShowOverlay;
+        set
+        {
+            if (Settings.General.ShowOverlay == value) return;
+            Settings.General = Settings.General with { ShowOverlay = value };
+            OverlayVisibilityChanged?.Invoke(value);
+        }
+    }
+
+    public event Action<bool>? OverlayVisibilityChanged;
+
+    public void SetOverlayVisible(bool visible) => OverlayVisible = visible;
+
+    /// <summary>Attach ke RobloxPlayerBeta via reader (handle + module base untuk memory read).</summary>
+    public void AttachRoblox()
+    {
+        var ok = _reader.TryAttach(out var status);
+        AppLog.Line($"Attach: {status}");
+        AppLog.Line(VersionStatus);
+        if (ok) StatusChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Status version check offsets vs Roblox yang sedang di-attach (mirip peringatan
+    /// asli "Roblox version changed - update shared offsets"). Never crash: tiap kondisi
+    /// tidak lengkap dilaporkan apa adanya.
+    /// </summary>
+    public string VersionStatus
+    {
+        get
+        {
+            if (!IsAttached) return "Version check: Roblox not attached.";
+            string? live = _reader.GetRobloxVersion();
+            if (string.IsNullOrEmpty(live)) return "Version check: Roblox version unknown.";
+            if (!_offsets.HasVersionInfo)
+                return $"Version check: offsets carry no version info (Roblox {live}).";
+            return _offsets.MatchesRobloxVersion(live)
+                ? $"Version check: offsets match Roblox {live}."
+                : $"WARNING: Roblox version changed - update offsets! " +
+                  $"(offsets target {_offsets.RobloxVersion}, Roblox is {live})";
+        }
+    }
+
+    public void DetachRoblox() => _reader.Detach();
+
+    /// <summary>Reload offsets from the local file. Returns false if file missing/invalid.</summary>
+    public bool ReloadOffsets()
+    {
+        var loaded = OffsetsSnapshot.LoadFromFile(_offsetsFilePath);
+        if (loaded is null) return false;
+        _offsets = loaded;
+        _reader.OffsetsSnapshot = loaded;
+        AppLog.Line($"Offsets reloaded from {_offsetsFilePath} ({loaded.Count} entries).");
+        AppLog.Line(VersionStatus);
+        return true;
+    }
+
+    /// <summary>Fetch, validate, and atomically save offsets to the local file.</summary>
+    public async Task<(bool Ok, string Message)> UpdateAndSaveOffsetsAsync(string? url = null)
+    {
+        var target = string.IsNullOrWhiteSpace(url)
+            ? Settings.Offsets.ProviderUrl
+            : url;
+        if (string.IsNullOrWhiteSpace(target))
+            return (false, "No offsets URL configured.");
+        var (ok, msg) = await _offsetsUpdate.TryUpdateAndSaveAsync(target, _offsetsFilePath);
+        if (ok) ReloadOffsets();
+        return (ok, msg);
+    }
+
+    private void PollHotkey()
+    {
+        // Capture keybind aktif → hotkey diabaikan supaya menekan tombol tidak ikut start/stop.
+        if (HotkeyCaptureActive) { _hotkeyWasDown = _hotkey.IsHotkeyPressed(); return; }
+
+        // Deteksi tepi: toggle hanya saat berubah tidak-ditekan → ditekan.
+        // Satu tekan = satu toggle; tanpa Sleep (reentrancy antar callback timer dihindari).
+        bool down = _hotkey.IsHotkeyPressed();
+        if (down && !_hotkeyWasDown)
+        {
+            Toggle();
+            AppLog.Line($"Hotkey toggled -> fishing={_macro.Running}");
+        }
+        _hotkeyWasDown = down;
+    }
+
+    private volatile bool _hotkeyWasDown;
+
+    /// <summary>True selama UI sedang menangkap keybind baru (hotkey diabaikan).</summary>
+    public volatile bool HotkeyCaptureActive;
+
+    public event Action? StatusChanged;
+
+    public void Dispose()
+    {
+        _attachTimer.Dispose();
+        _macro.Stop();
+        _autoSaver.Dispose();
+        _reader.Dispose();
+        _attacher.Dispose();
+    }
+}

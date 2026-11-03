@@ -1,0 +1,38 @@
+{
+  // Sample offsets for Grand Piece Online (Roblox).
+  // These values are EXAMPLES only — replace with offsets matching your live Roblox build.
+  // Live offsets.json is git-ignored (never commit real offsets).
+  // All values are decimal (JSON does not support hex literals).
+
+  // --- Roblox instance tree resolution ---
+  "FakeDataModel.Pointer": 56,
+  "FakeDataModel.RealDataModel": 16,
+  "StringLength": 16,
+  "ClassDescriptor": 24,
+  "ClassDescriptorToClassName": 8,
+  "Instance.NameContainer": 152,
+  "Instance.Name": 144,
+  "Children": 64,
+  "ChildrenEnd": 72,
+  "Parent": 48,
+
+  // --- Service chain ---
+  "Player.LocalPlayer": 288,
+  "Player.UserId": 312,
+  "Player.DisplayName": 328,
+
+  // --- Fishing (from Grand Piece.exe strings) ---
+  "Fishing.ReelFlag": 1437,
+  "Fishing.BaitCount": 1440,
+  "Fishing.PreferredBait": 1448,
+  "Fishing.FruitsList": 1456,
+  "Fishing.SpawnNotices": 1464,
+
+  // --- Loot ---
+  "Loot.AutoOpenChests": 1472,
+  "Loot.AutoStoreFruits": 1480,
+  "Loot.LastChestRemoved": 1488,
+
+  // --- Camera ---
+  "Camera.Position": 1496
+}

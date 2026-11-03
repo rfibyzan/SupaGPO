@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:SupaGPO.Presentation.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="980" d:DesignHeight="700"
+        x:Class="SupaGPO.Presentation.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="SupaGPO — Grand Piece Online (fishing client)"
+        Width="980" Height="700" MinWidth="780" MinHeight="520"
+        Background="{DynamicResource OfBg}">
+
+  <Grid RowDefinitions="44,Auto,Auto,Auto,*">
+    <!-- Brand -->
+    <StackPanel Orientation="Horizontal" Spacing="10" Margin="14,0" VerticalAlignment="Center" IsHitTestVisible="False">
+      <Border Classes="badge" Width="26" Height="26">
+        <TextBlock Text="G" FontWeight="Bold" Foreground="{DynamicResource OfOnAccent}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Border>
+      <TextBlock Text="SupaGPO" FontWeight="SemiBold" VerticalAlignment="Center" />
+    </StackPanel>
+
+    <!-- Tab strip atas -->
+    <Border Grid.Row="1" BorderBrush="{DynamicResource OfBorder}" BorderThickness="0,0,0,1" Margin="14,4,14,0" Padding="0,0,0,8">
+      <ListBox Classes="tabs" ItemsSource="{Binding Tabs}" SelectedIndex="{Binding SelectedTabIndex}">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" />
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:TabViewModel">
+            <TextBlock Text="{Binding Title}" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <!-- Strip status koneksi + badge CONNECTED -->
+    <Border Grid.Row="2" Classes="strip" Margin="14,8,14,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{Binding ConnectionText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        <Border Grid.Column="1" CornerRadius="4" Padding="8,2" VerticalAlignment="Center"
+                Background="{DynamicResource OfAccentDim}" IsVisible="{Binding IsAttached}">
+          <TextBlock Text="CONNECTED" Classes="caps" Foreground="{DynamicResource OfAccent}" />
+        </Border>
+      </Grid>
+    </Border>
+
+    <!-- Header halaman + indikator Stopped/Running -->
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="14,12,14,6" IsVisible="{Binding ShowHeader}">
+      <TextBlock Classes="h1" Text="{Binding HeaderTitle}" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <Ellipse Width="8" Height="8" Fill="{DynamicResource OfAccent}" VerticalAlignment="Center" />
+        <TextBlock Classes="muted" Text="{Binding RunStateText}" />
+      </StackPanel>
+    </Grid>
+
+    <ScrollViewer Grid.Row="4" Margin="14,4,14,14" HorizontalScrollBarVisibility="Disabled">
+      <ContentControl Content="{Binding CurrentContent}" />
+    </ScrollViewer>
+  </Grid>
+</Window>

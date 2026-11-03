@@ -1,0 +1,25 @@
+# SupaGPO — clean-room Grand Piece Online fishing client (external memory reader, no injection)
+
+## Build output
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+
+## .NET
+.ionide/
+.vs/
+
+## Runtime/local config (never commit)
+src/**/preferences.json
+src/**/preferences.json.tmp
+src/**/offsets.json
+*.publish/
+
+## IDE
+.idea/
+*.DS_Store

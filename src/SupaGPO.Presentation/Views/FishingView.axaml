@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SupaGPO.Presentation.ViewModels"
+             x:DataType="vm:FishingViewModel"
+             x:Class="SupaGPO.Presentation.Views.FishingView">
+
+    <StackPanel Spacing="12">
+        <!-- Start + sesi + status -->
+        <Border Classes="card">
+            <StackPanel Spacing="10">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Fishing" Classes="h2" />
+                        <TextBlock Text="{Binding SessionText}" Classes="muted" />
+                    </StackPanel>
+                    <Ellipse Grid.Column="1" Width="8" Height="8" Fill="{DynamicResource OfAccent}"
+                             VerticalAlignment="Center" />
+                </Grid>
+                <Button Classes="accent" Command="{Binding ToggleCommand}"
+                        Content="{Binding ToggleText}" HorizontalAlignment="Stretch" />
+                <Border Classes="strip">
+                    <TextBlock Text="{Binding StatusText}" />
+                </Border>
+                <TextBlock Classes="caps" TextWrapping="Wrap"
+                           Text="Stand at your fishing spot and focus the Roblox window. The macro clicks to cast, waits for the bite, then holds/releases click to keep the white line out of the blue zone." />
+            </StackPanel>
+        </Border>
+
+        <!-- Sub-tab: General / Auto buy leg bait -->
+        <Border BorderBrush="{DynamicResource OfBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <ListBox Classes="tabs" ItemsSource="{Binding SubTabs}" SelectedIndex="{Binding SubTab}">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+            </ListBox>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding IsGeneral}">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Rod slot (1-9):" Classes="label" />
+                    <NumericUpDown Value="{Binding RodSlot}" Minimum="1" Maximum="9" />
+                </StackPanel>
+                <CheckBox Content="Equip rod on start (start with the rod unequipped Ã¢â‚¬â€ slot key toggles)"
+                          IsChecked="{Binding EquipOnStart}" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Bite timeout (s):" Classes="label" />
+                    <NumericUpDown Value="{Binding BiteTimeoutSec}" Minimum="10" Maximum="300" />
+                    <TextBlock Text="recast when no bite" Classes="muted" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Macro hotkey:" Classes="label" />
+                    <Button Content="{Binding KeybindButtonText}" Command="{Binding ChangeKeybindCommand}" />
+                    <CheckBox Content="Show overlay" IsChecked="{Binding ShowOverlay}" />
+                </StackPanel>
+                <CheckBox Content="Auto refill Common bait" IsChecked="{Binding AutoRefillBait}" />
+                <CheckBox Content="Walk to bait seller if prompt not in range" IsChecked="{Binding AutoWalkToBait}" IsEnabled="{Binding AutoRefillBait}" />
+                <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding AutoRefillBait}">
+                    <TextBlock Text="Buy amount:" Classes="label" />
+                    <NumericUpDown Value="{Binding RefillAmount}" Minimum="1" Maximum="99" />
+                    <TextBlock Text="every" Classes="label" VerticalAlignment="Center" />
+                    <NumericUpDown Value="{Binding RefillEvery}" Minimum="1" Maximum="99" />
+                    <TextBlock Text="catches" Classes="label" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding AutoWalkToBait}">
+                    <TextBlock Text="Walk timeout (s):" Classes="label" />
+                    <NumericUpDown Value="{Binding WalkTimeoutSec}" Minimum="5" Maximum="60" />
+                </StackPanel>
+                <TextBlock Classes="caps" TextWrapping="Wrap"
+                           Text="Between sessions the macro presses E at the bait seller (prompt must be visible from your fishing spot), confirms the purchase, and closes the text bar. Bait count cannot be read from memory, so refill runs on a catch counter. Enable 'Walk to bait seller' to automatically navigate to the nearest bait shop if the prompt is out of range." />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding IsLegBait}">
+            <StackPanel Spacing="10">
+                <CheckBox Content="Auto buy Legendary bait at Trading Hub" IsChecked="{Binding AutoBuyLegBait}" />
+                <TextBlock Classes="caps" TextWrapping="Wrap"
+                           Text="Coming soon Ã¢â‚¬â€ walks to the Trading Hub and buys Legendary bait before the session." />
+            </StackPanel>
+        </Border>
+
+        <!-- Offsets / versi -->
+        <Border Classes="card">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Roblox version" Classes="h2" />
+                <Border Classes="strip">
+                    <TextBlock Text="{Binding VersionText}" TextWrapping="Wrap" />
+                </Border>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Attach" Command="{Binding AttachCommand}" />
+                    <Button Content="Update offsets" Command="{Binding UpdateOffsetsCommand}" />
+                    <Button Content="Test Bait Refill" Command="{Binding TestBaitRefillCommand}" IsEnabled="{Binding !Running}" />
+                    <TextBlock Text="{Binding OffsetsStatus}" Classes="caps" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SupaGPO.Presentation.ViewModels"
+             x:DataType="vm:PlaceholderViewModel"
+             x:Class="SupaGPO.Presentation.Views.PlaceholderView">
+
+    <Border Classes="card">
+        <StackPanel Spacing="6">
+            <TextBlock Text="{Binding Title}" Classes="h2" />
+            <TextBlock Text="{Binding Text}" Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+    </Border>
+</UserControl>
